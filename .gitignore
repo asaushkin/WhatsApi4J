@@ -1,2 +1,4 @@
+/target/
+/build.xml
+/jar-in-jar-loader.zip
 /*.log
-/target

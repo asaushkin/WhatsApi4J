@@ -16,6 +16,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -1252,7 +1253,7 @@ public class WhatsApi {
 	 */
 	public String sendMessage(String to, String message, String id) throws WhatsAppException {
 		message = parseMessageForEmojis(message);
-		ProtocolNode bodyNode = new ProtocolNode("body", null, null, message.getBytes());
+		ProtocolNode bodyNode = new ProtocolNode("body", null, null, message.getBytes(Charset.forName("UTF-8")));
 		try {
 			return sendMessageNode(to, bodyNode, id);
 		} catch (Exception e) {

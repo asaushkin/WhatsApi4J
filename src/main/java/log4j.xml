@@ -12,22 +12,33 @@
             <param name="ConversionPattern" value="%d{ABSOLUTE} %-5p [%c{1}] %m%n" />
         </layout>
     </appender>
-    
-    
-   <!-- Main Tecnomen log-->
+	<appender name="R" class="org.apache.log4j.RollingFileAppender">
+		<param name="file" value="whatsapp-sender.log" />
+		<param name="MaxFileSize" value="1000KB" />
+		<!-- Keep one backup file -->
+		<param name="MaxBackupIndex" value="5" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern" value="%p %t %c - %m%n" />
+		</layout>
+	</appender>
+
+	<!-- Main Tecnomen log -->
 	<logger name="net.sumppen" additivity="false">
-	   <level value="ALL" />       
-      <appender-ref ref="CONSOLE" />
-	</logger>
-    
-	<logger name="ru.taximaxim" additivity="false">
-	   <level value="ALL" />       
-      <appender-ref ref="CONSOLE" />
+		<level value="ALL" />
+		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="R" />
 	</logger>
 
-    <root>
-        <level value="INFO" />
-        <appender-ref ref="CONSOLE" />
-    </root>
+	<logger name="ru.taximaxim" additivity="false">
+		<level value="ALL" />
+		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="R" />
+	</logger>
+
+	<root>
+		<level value="INFO" />
+		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="R" />
+	</root>
 
 </log4j:configuration>

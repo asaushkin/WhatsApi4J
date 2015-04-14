@@ -1,13 +1,17 @@
 package ru.taximaxim.whatsapp.cli;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 
 import net.sumppen.whatsapi4j.EventManager;
@@ -37,6 +41,8 @@ import org.slf4j.LoggerFactory;
 public class RGClient {
 
 	static Logger logger = LoggerFactory.getLogger(RGClient.class);
+	static String identity = "RGClient";
+	static String nickname = "RGClient API";
 			
 	/**
 	 * Убедитесь, что у вас есть телефон с работающей сим картой, на этот номер телефона
@@ -91,8 +97,12 @@ public class RGClient {
 		options.addOption("c", false, "Create the confirmation code (Step 1)");
 		options.addOption("a", true, "Register code (Step 2), parameter is a code from Step 1 sended via SMS on phone in Step 1");
 		options.addOption("p", true, "Password for WatsApp sender step");
-		options.addOption("s", true, "Message body (required -p)");
+		options.addOption("s", true, "Message body from command line (required -p)");
+		options.addOption("F", true, "Message body from file (required -p)");
+		options.addOption("e", true, "Encoding message body file (required -F) by default - UTF-8");
 		options.addOption("f", true, "File list of recipients (required -p) one recipient by line");
+		options.addOption("i", true, "Identity, default: RGClient");
+		options.addOption("u", true, "Nickname, default: RGClient API");
 		options.addOption("h", false, "Help message");
 
 		////////////
@@ -115,6 +125,16 @@ public class RGClient {
 			System.exit(1);
 		}
 		
+		if (cmd.hasOption("i")) {
+			identity = cmd.getOptionValue("i");
+			logger.info("Set identity to: " + identity);
+		}
+		
+		if (cmd.hasOption("u")) {
+			nickname = cmd.getOptionValue("u");
+			logger.info("Set nickname to: " + nickname);
+		}
+		
 		// Номер телфефона обязателен для каждого параметра
 		checkPhoneNumber(cmd);
 
@@ -131,7 +151,7 @@ public class RGClient {
 			registerPhone(cmd);
 			
 			logger.debug("Code registered");
-		} else if (cmd.hasOption("s")) {
+		} else if (cmd.hasOption("s") || cmd.hasOption("F")) {
 			logger.debug("Send message");
 			
 			sendMessages(cmd);
@@ -143,10 +163,55 @@ public class RGClient {
 		logger.info("Application exit");
 	}
 
+	static String readFile(String path, String encoding) throws IOException {
+		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		String s = new String(encoded, encoding);
+		
+		return s;
+	}
+	
+	static String readFile2(String path, String encoding) {
+
+		StringBuffer b = new StringBuffer();
+		try {
+			File fileDir = new File(path);
+
+			BufferedReader in = 
+					new BufferedReader(
+							new InputStreamReader(
+									new FileInputStream(fileDir), Charset.forName(encoding)));
+
+			String str;
+
+			while ((str = in.readLine()) != null) {
+				b.append(str);
+			}
+
+			in.close();
+		} catch (UnsupportedEncodingException e) {
+			System.out.println(e.getMessage());
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return b.toString();
+	}
+	
 	private static void sendMessages(CommandLine cmd) throws FileNotFoundException, IOException, NoSuchAlgorithmException, WhatsAppException {
 		
 		int error = 0;
-		String message = cmd.getOptionValue("s");
+		String message = null;
+		if (cmd.hasOption("s")) {
+			message = cmd.getOptionValue("s");
+		}
+		else if (cmd.hasOption("F")) {
+			String encoding = cmd.hasOption("e") ? cmd.getOptionValue("e") : "UTF-8";
+			message = readFile2(cmd.getOptionValue("F"), encoding);
+
+			logger.debug("Encoded message is: " + message);
+		} 
+		
 		String file;
 		String password;
 		
@@ -206,8 +271,12 @@ public class RGClient {
 	}
 
 	private static WhatsApi getApi(String phoneNumber, String password) throws NoSuchAlgorithmException, WhatsAppException, UnknownHostException, IOException {
+		return getApi(phoneNumber, password, identity, nickname);
+	}
+	
+	private static WhatsApi getApi(String phoneNumber, String password, String identity, String nickname) throws NoSuchAlgorithmException, WhatsAppException, UnknownHostException, IOException {
 
-		WhatsApi wa = new WhatsApi(phoneNumber, "RGClient", "RGClient API");
+		WhatsApi wa = new WhatsApi(phoneNumber, identity, nickname);
 		EventManager eventManager = new ExampleEventManager();
 		wa.setEventManager(eventManager );
 		MessageProcessor mp = new ExampleMessageProcessor();
