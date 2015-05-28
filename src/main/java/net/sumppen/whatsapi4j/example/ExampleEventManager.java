@@ -2,11 +2,14 @@ package net.sumppen.whatsapi4j.example;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 import net.sumppen.whatsapi4j.AbstractEventManager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ExampleEventManager extends AbstractEventManager {
+	static Logger logger = LoggerFactory.getLogger(ExampleEventManager.class);
+
 	@Override
 	public void fireEvent(String event, Map<String, String> eventData) {
 		if(event.equals(AbstractEventManager.EVENT_UNKNOWN)) {
@@ -25,7 +28,7 @@ public class ExampleEventManager extends AbstractEventManager {
 			sb.append("=");
 			sb.append(eventData.get(key));
 		}
-		System.out.println(sb.toString());
+		logger.debug(sb.toString());
 		if(event.equals("disconnect")) {
 			ExampleApplication.running=false;
 		}

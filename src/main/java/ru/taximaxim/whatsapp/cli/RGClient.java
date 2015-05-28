@@ -13,6 +13,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
 import net.sumppen.whatsapi4j.EventManager;
 import net.sumppen.whatsapi4j.MessageProcessor;
@@ -43,6 +44,9 @@ public class RGClient {
 	static Logger logger = LoggerFactory.getLogger(RGClient.class);
 	static String identity = "RGClient";
 	static String nickname = "RGClient API";
+	
+	static int minDelay = 0;
+	static int maxDelay = 0;
 			
 	/**
 	 * Убедитесь, что у вас есть телефон с работающей сим картой, на этот номер телефона
@@ -86,8 +90,9 @@ public class RGClient {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws IOException 
 	 * @throws UnknownHostException 
+	 * @throws InterruptedException 
 	 */
-	public static void main(String[] args) throws NoSuchAlgorithmException, WhatsAppException, JSONException, UnknownHostException, IOException {
+	public static void main(String[] args) throws NoSuchAlgorithmException, WhatsAppException, JSONException, UnknownHostException, IOException, InterruptedException {
 		logger.info("Starting an application 'TaxiMaxim WathsApp sender'");
 		logger.debug("Prepare the command line parser");
 		
@@ -103,6 +108,8 @@ public class RGClient {
 		options.addOption("f", true, "File list of recipients (required -p) one recipient by line");
 		options.addOption("i", true, "Identity, default: RGClient");
 		options.addOption("u", true, "Nickname, default: RGClient API");
+		options.addOption("m", true, "Minimal timeout delay between messages in milliseconds");
+		options.addOption("M", true, "Maximum timeout delay between messages in milliseconds");
 		options.addOption("h", false, "Help message");
 
 		////////////
@@ -124,7 +131,8 @@ public class RGClient {
 			formatter.printHelp("app", options );
 			System.exit(1);
 		}
-		
+
+		// Identity & nickname
 		if (cmd.hasOption("i")) {
 			identity = cmd.getOptionValue("i");
 			logger.info("Set identity to: " + identity);
@@ -135,6 +143,29 @@ public class RGClient {
 			logger.info("Set nickname to: " + nickname);
 		}
 		
+		// Messages delay
+		if (cmd.hasOption("m")) {
+			minDelay = maxDelay = Integer.valueOf(cmd.getOptionValue("m"));
+		} 
+		
+		if (cmd.hasOption("M")) {
+			maxDelay = Integer.valueOf(cmd.getOptionValue("M"));
+		}
+		
+		logger.info("Minimal delay set to: " + minDelay + " ms.");
+		logger.info("Maximal delay set to: " + maxDelay + " ms.");
+
+		if (maxDelay < minDelay) {
+			logger.error("Maximal delay less than minimal. Swapping values.");
+			int t = minDelay;
+			minDelay = maxDelay;
+			maxDelay = t;
+
+			logger.debug("After swapping delay values");
+			logger.debug("Minimal delay set to: " + minDelay + " ms.");
+			logger.debug("Maximal delay set to: " + maxDelay + " ms.");
+		}
+
 		// Номер телфефона обязателен для каждого параметра
 		checkPhoneNumber(cmd);
 
@@ -163,6 +194,33 @@ public class RGClient {
 		logger.info("Application exit");
 	}
 
+	/**
+	 * Returns a pseudo-random number between min and max, inclusive.
+	 * The difference between min and max can be at most
+	 * <code>Integer.MAX_VALUE - 1</code>.
+	 *
+	 * @param min Minimum value
+	 * @param max Maximum value.  Must be greater than min.
+	 * @return Integer between min and max, inclusive.
+	 * @see java.util.Random#nextInt(int)
+	 * @see http://stackoverflow.com/questions/363681/generating-random-integers-in-a-range-with-java
+	 */
+	public static int randInt(int min, int max) {
+		
+		if (min == max)
+			return min;
+
+	    // NOTE: Usually this should be a field rather than a method
+	    // variable so that it is not re-seeded every call.
+	    Random rand = new Random();
+
+	    // nextInt is normally exclusive of the top value,
+	    // so add 1 to make it inclusive
+	    int randomNum = rand.nextInt(max - min) + min;
+
+	    return randomNum;
+	}	
+	
 	static String readFile(String path, String encoding) throws IOException {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		String s = new String(encoded, encoding);
@@ -198,7 +256,7 @@ public class RGClient {
 		return b.toString();
 	}
 	
-	private static void sendMessages(CommandLine cmd) throws FileNotFoundException, IOException, NoSuchAlgorithmException, WhatsAppException {
+	private static void sendMessages(CommandLine cmd) throws FileNotFoundException, IOException, NoSuchAlgorithmException, WhatsAppException, InterruptedException {
 		
 		int error = 0;
 		String message = null;
@@ -246,6 +304,13 @@ public class RGClient {
 				logger.info("Sending to: " + outPhoneNumber);
 				String res = wa.sendMessage(outPhoneNumber, message);
 				logger.debug(res);
+				
+				int sleepMillis = randInt(minDelay, maxDelay);
+
+				if (sleepMillis > 0) {
+					logger.debug("Sleeping " + sleepMillis + " milliseconds");
+					Thread.sleep(sleepMillis);
+				}
 		    }
 		}
 	}
